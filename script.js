@@ -30,6 +30,29 @@
         return true;
     }
 
+    // Keywords management functions
+    const cleanKeyword = (keyword) => {
+        if (typeof keyword !== 'string') return '';
+        return keyword
+            .replace(/[^a-zñáéíóú0-9 ]+/igm, "")
+            .trim()
+            .toLowerCase();
+    }
+
+    const getMyKeywords = () => {
+        const keywords = localStorage.getItem('my_keywords');
+        if (!keywords) return [];
+        try {
+            return JSON.parse(keywords);
+        } catch {
+            return [];
+        }
+    }
+
+    const saveMyKeywords = (keywords) => {
+        localStorage.setItem('my_keywords', JSON.stringify(keywords));
+    }
+
     // VISTAS
 
     const indexView = (peliculas) => {
@@ -376,6 +399,10 @@
                     ${castSection}
                     ${reviewsSection}
                     <div class="actions" style="justify-content:flex-start; margin-top:28px;">
+                        ${pelicula.tmdb_id ? `
+                            <button class="view-keywords" data-movie-id="${pelicula.tmdb_id}" data-movie-title="${pelicula.titulo}">
+                                <i class="fas fa-tags"></i> Ver Palabras
+                            </button>` : ''}
                         <button class="index"><i class="fas fa-arrow-left"></i> Volver</button>
                     </div>
                 </div>
@@ -565,6 +592,70 @@
         </div>`;
         
         return view;
+    }
+
+    const keywordsView = (movieId, movieTitle, keywords) => {
+        let keywordsHTML = '';
+        
+        if (keywords && keywords.length > 0) {
+            keywordsHTML = keywords.map(keywordObj => {
+                const cleanedKeyword = cleanKeyword(keywordObj.name);
+                return `
+                    <div class="keyword-item">
+                        <span>${keywordObj.name}</span>
+                        <button class="add-keyword" data-keyword="${cleanedKeyword}">+</button>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            keywordsHTML = '<p style="text-align:center; color:#888;">No hay palabras clave disponibles para esta película.</p>';
+        }
+        
+        return `
+        <div class="modal-bg">
+            <div class="modal">
+                <h2><i class="fas fa-tags"></i> Palabras Clave</h2>
+                <p style="font-size:16px; color:var(--tmdb-dark-blue); font-weight:600; margin-bottom:16px;">
+                    ${movieTitle}
+                </p>
+                <div class="keywords-list">
+                    ${keywordsHTML}
+                </div>
+                <div class="actions" style="margin-top:24px;">
+                    <button class="index"><i class="fas fa-arrow-left"></i> Volver</button>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    const myKeywordsView = (keywords) => {
+        let keywordsHTML = '';
+        
+        if (keywords && keywords.length > 0) {
+            keywordsHTML = keywords.map(keyword => {
+                return `
+                    <div class="keyword-item">
+                        <span>${keyword}</span>
+                        <button class="remove-keyword" data-keyword="${keyword}">×</button>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            keywordsHTML = '<p style="text-align:center; color:#888;">No tienes palabras clave guardadas aún. Explora películas y añade sus palabras clave a tu lista.</p>';
+        }
+        
+        return `
+        <div class="modal-bg">
+            <div class="modal">
+                <h2><i class="fas fa-tags"></i> Mis Palabras Clave</h2>
+                <div class="keywords-list">
+                    ${keywordsHTML}
+                </div>
+                <div class="actions" style="margin-top:24px;">
+                    <button class="index"><i class="fas fa-arrow-left"></i> Volver</button>
+                </div>
+            </div>
+        </div>`;
     }
 
     // CONTROLADORES 
@@ -880,6 +971,7 @@
             const rating = typeof movieData.vote_average === 'number' ? movieData.vote_average : '';
 
             const nuevaPelicula = {
+                tmdb_id: movieData.id,
                 titulo: movieData.title,
                 director: director,
                 año: movieData.release_date ? movieData.release_date.split('-')[0] : '',
@@ -1215,6 +1307,9 @@
                     ${castSection}
                     ${reviewsSection}
                     <div class="actions" style="justify-content:flex-start; margin-top:28px; gap:12px;">
+                        <button class="view-keywords" data-movie-id="${movieData.id}" data-movie-title="${movieData.title}">
+                            <i class="fas fa-tags"></i> Ver Palabras
+                        </button>
                         <button class="add-from-api" data-movie='${JSON.stringify(movieData).replace(/'/g, "&apos;")}'><i class="fas fa-plus"></i> Añadir a mi lista</button>
                         <button class="back-to-search"><i class="fas fa-arrow-left"></i> Volver a búsqueda</button>
                         <button class="index"><i class="fas fa-home"></i> Ir al inicio</button>
@@ -1243,6 +1338,96 @@
         }
     }
 
+    // Keywords Controllers
+    const keywordsContr = async (ev) => {
+        const movieId = ev.target.dataset.movieId;
+        const movieTitle = ev.target.dataset.movieTitle;
+        
+        if (!movieId) {
+            alert('No se pudo obtener el ID de la película');
+            return;
+        }
+        
+        // Mostrar estado de carga
+        document.getElementById('main').innerHTML = `
+            <div style="text-align:center; padding:100px 20px;">
+                <div class="loading"></div>
+                <p style="margin-top:24px; font-size:18px; color:#666;"><i class="fas fa-tags"></i> Cargando palabras clave...</p>
+            </div>
+        `;
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/movie/${movieId}/keywords`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const keywords = processKeywords(data.keywords || []);
+            
+            document.getElementById('main').innerHTML = keywordsView(movieId, movieTitle, keywords);
+        } catch (error) {
+            console.error('Error al obtener palabras clave:', error);
+            alert('Error al cargar las palabras clave. Por favor, intenta de nuevo.');
+            indexContr();
+        }
+    }
+
+    const processKeywords = (keywords) => {
+        // Por ahora solo devolvemos las palabras clave tal como vienen
+        // En el futuro se podría añadir limpieza o normalización adicional
+        return keywords;
+    }
+
+    const addKeywordContr = (ev) => {
+        const keyword = ev.target.dataset.keyword;
+        
+        if (!keyword) {
+            alert('Error al obtener la palabra clave');
+            return;
+        }
+        
+        const myKeywords = getMyKeywords();
+        
+        // Verificar si ya existe
+        if (myKeywords.includes(keyword)) {
+            alert('Esta palabra clave ya está en tu lista');
+            return;
+        }
+        
+        // Añadir y guardar
+        myKeywords.push(keyword);
+        saveMyKeywords(myKeywords);
+        
+        alert(`"${keyword}" añadida a tu lista de palabras clave`);
+    }
+
+    const myKeywordsContr = () => {
+        const keywords = getMyKeywords();
+        document.getElementById('main').innerHTML = myKeywordsView(keywords);
+    }
+
+    const removeKeywordContr = (ev) => {
+        const keyword = ev.target.dataset.keyword;
+        
+        if (!keyword) {
+            alert('Error al obtener la palabra clave');
+            return;
+        }
+        
+        if (!confirm(`¿Estás seguro de que quieres eliminar "${keyword}" de tu lista?`)) {
+            return;
+        }
+        
+        const myKeywords = getMyKeywords();
+        const filteredKeywords = myKeywords.filter(k => k !== keyword);
+        saveMyKeywords(filteredKeywords);
+        
+        // Refrescar la vista
+        myKeywordsContr();
+    }
+
     // ROUTER de eventos
     const matchEvent = (ev, sel) => ev.target.matches(sel)
     const myId = (ev) => Number(ev.target.dataset.myId)
@@ -1262,6 +1447,10 @@
         else if (matchEvent(ev, '.consult-from-api'))    consultFromAPIContr (ev);
         else if (matchEvent(ev, '.back-to-search'))      backToSearchContr   ();
         else if (matchEvent(ev, '.suggestion-item'))     suggestionClickContr(ev);
+        else if (matchEvent(ev, '.my-keywords'))         myKeywordsContr     ();
+        else if (matchEvent(ev, '.view-keywords'))       keywordsContr       (ev);
+        else if (matchEvent(ev, '.add-keyword'))         addKeywordContr     (ev);
+        else if (matchEvent(ev, '.remove-keyword'))      removeKeywordContr  (ev);
     })
 
     // Soporte para presionar Enter en el campo de búsqueda

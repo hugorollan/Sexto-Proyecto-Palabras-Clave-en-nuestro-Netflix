@@ -108,6 +108,24 @@ app.get('/api/popular', async (req, res) => {
     }
 });
 
+// Get movie keywords
+app.get('/api/movie/:id/keywords', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Validate that id is a number to prevent injection
+        if (!/^\d+$/.test(id)) {
+            return res.status(400).json({ error: 'Invalid movie ID' });
+        }
+        
+        const data = await fetchFromTMDb(`/movie/${id}/keywords`);
+        res.json(data);
+    } catch (error) {
+        console.error('Error in /api/movie/keywords:', error);
+        res.status(500).json({ error: 'Error fetching movie keywords' });
+    }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ 
