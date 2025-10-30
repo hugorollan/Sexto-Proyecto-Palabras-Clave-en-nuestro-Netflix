@@ -803,3 +803,97 @@ footer {
     opacity: 0.9;
     font-weight: 500;
 }
+
+/* Keywords styling */
+.keywords-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 20px 0;
+    padding: 16px;
+    background: #f9f9f9;
+    border-radius: 12px;
+}
+
+.keyword-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: all 0.3s;
+}
+
+.keyword-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.keyword-item span {
+    font-size: 14px;
+    color: var(--tmdb-dark-blue);
+    font-weight: 500;
+}
+
+.keyword-item button.add-keyword {
+    background: var(--tmdb-light-green);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.keyword-item button.add-keyword:hover {
+    background: #6ab035;
+    transform: scale(1.1);
+}
+
+.keyword-item button.remove-keyword {
+    background: #e85d30;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.keyword-item button.remove-keyword:hover {
+    background: #d14520;
+    transform: scale(1.1);
+}
+
+.view-keywords {
+    background: var(--tmdb-light-blue);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.view-keywords:hover {
+    background: var(--tmdb-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(1, 180, 228, 0.3);
+}
